@@ -1,0 +1,34 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isSelf(uid) { return signedIn() && request.auth.uid == uid; }
+    function role() { return signedIn() ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role : ''; }
+    function isAdmin() { return role() == 'ADMIN'; }
+    match /users/{uid} {
+      allow create: if isSelf(uid) && request.resource.data.role in ['CONSUMER','MERCHANT','PROMOTER'];
+      allow read: if isSelf(uid) || isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+    match /products/{id} {
+      allow read: if signedIn();
+      allow create, update, delete: if false;
+    }
+    match /wallets/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
+      allow write: if false;
+    }
+    match /orders/{id} {
+      allow read: if isAdmin() || (signedIn() && (resource.data.consumerId == request.auth.uid || resource.data.merchantId == request.auth.uid || resource.data.promoterId == request.auth.uid));
+      allow write: if false;
+    }
+    match /wallet_transactions/{id} { allow read: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid); allow write: if false; }
+    match /top_up_requests/{id} { allow read: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid); allow create, update, delete: if false; }
+    match /disputes/{id} { allow read: if isAdmin() || (signedIn() && (resource.data.openedByUserId == request.auth.uid)); allow create: if signedIn() && request.resource.data.openedByUserId == request.auth.uid; allow update: if false; }
+    match /notifications/{id} { allow read, update: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid); allow create: if isAdmin(); }
+    match /audit_logs/{id} { allow read: if isAdmin(); allow write: if isAdmin(); }
+    match /platform_settings/{id} { allow read: if signedIn(); allow write: if isAdmin(); }
+    match /users/{uid}/fcm_tokens/{tokenId} { allow read, write, delete: if isSelf(uid); }
+  }
+}

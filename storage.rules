@@ -1,0 +1,22 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() { return request.auth != null; }
+    function self(uid) { return signedIn() && request.auth.uid == uid; }
+    function admin() { return signedIn() && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'ADMIN'; }
+    function validImage() { return request.resource.size < 10 * 1024 * 1024 && request.resource.contentType.matches('image/.*'); }
+
+    match /product_images/{uid}/{fileName} {
+      allow read: if signedIn();
+      allow write: if self(uid) && validImage();
+    }
+    match /topup_receipts/{uid}/{fileName} {
+      allow read: if self(uid) || admin();
+      allow write: if self(uid) && validImage();
+    }
+    match /delivery_proofs/{uid}/{fileName} {
+      allow read: if self(uid) || admin();
+      allow write: if self(uid) && validImage();
+    }
+  }
+}

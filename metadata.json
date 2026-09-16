@@ -1,0 +1,6 @@
+{
+  "name": "المتجر اليمني",
+  "description": "منصة تجارة إلكترونية يمنية تربط المستهلكين والتجار والمروجين والإدارة مع نظام محفظة وضمان مالي Escrow وعمولات",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
